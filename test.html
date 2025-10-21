@@ -27,10 +27,9 @@
 
         // Listen for messages
         socket.addEventListener("message", (event) => {
-            timeLog("Message from server ", event.data)
-            setTimeout(e => {
-                socket.send(JSON.stringify({ type: "ping", interval: t, date: now() }))
-            }, t *= 2)
+            let latency = Date.now() - JSON.parse(event.data).echo.time
+            timeLog(latency, "Message from server ", event.data)
+            setTimeout(e => { socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() })) }, t *= 2)
         })
 
         // Connection error

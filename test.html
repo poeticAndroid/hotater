@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="840">
     <title> T E S T </title>
     <style>
         html {
@@ -28,7 +27,7 @@
 
         // Listen for messages
         socket.addEventListener("message", (event) => {
-            let latency = Date.now() - JSON.parse(event.data).echo.time
+            let latency = Date.now() - JSON.parse(event.data)?.echo?.time
             timeLog(latency, "Message from server ", event.data)
             setTimeout(e => {
                 socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
@@ -59,7 +58,7 @@
         }
 
         setInterval(async () => {
-            timeLog((await fetch(".")).statusText)
+            timeLog("server ping", (await fetch(".")).statusText)
         }, 1000 * 60 * 15)
     </script>
 </body>

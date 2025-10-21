@@ -3,7 +3,7 @@ const http = require("http"),
     path = require("path")
 
 const hostname = "0.0.0.0"
-const port = process.env.PORT
+const port = process.env.PORT || 9001
 
 const server = http.createServer((req, res) => {
     res.setHeader("Cache-Control", "max-age=4096")

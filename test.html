@@ -28,7 +28,7 @@
         socket.addEventListener("message", (event) => {
             console.log("Message from server ", event.data)
             setTimeout(e => {
-                socket.send(JSON.stringify({ type: "ping", interval: t }))
+                socket.send(JSON.stringify({ type: "ping", interval: t, date: (new Date()).toLocaleString() }))
             }, t *= 2)
         })
 

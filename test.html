@@ -29,7 +29,7 @@
         socket.addEventListener("message", (event) => {
             timeLog("Message from server ", event.data)
             setTimeout(e => {
-                socket.send(JSON.stringify({ type: "ping", interval: t, date: (new Date()).toLocaleString() }))
+                socket.send(JSON.stringify({ type: "ping", interval: t, date: now() }))
             }, t *= 2)
         })
 
@@ -40,19 +40,17 @@
         socket.addEventListener("close", timeWarn)
 
         function timeLog(...args) {
-            let now = new Date()
-            now = now.toLocaleString() + "." + ("" + now.getTime()).slice(-3)
-            console.log(now, ...args)
+            console.log(now(), ...args)
         }
         function timeError(...args) {
-            let now = new Date()
-            now = now.toLocaleString() + "." + ("" + now.getTime()).slice(-3)
-            console.error(now, ...args)
+            console.error(now(), ...args)
         }
         function timeWarn(...args) {
+            console.warn(now(), ...args)
+        }
+        function now() {
             let now = new Date()
-            now = now.toLocaleString() + "." + ("" + now.getTime()).slice(-3)
-            console.warn(now, ...args)
+            return now.toLocaleString() + "." + ("" + now.getTime()).slice(-3)
         }
         function print(str, eol = "\n") {
             document.getElementById("output").textContent += str + eol

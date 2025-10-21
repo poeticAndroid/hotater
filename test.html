@@ -18,7 +18,7 @@
     <script>
         let t = 1
         // Create WebSocket connection.
-        const socket = new WebSocket("ws://" + location.host + "/ws/api1")
+        const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
 
         // Connection opened
         socket.addEventListener("open", (event) => {

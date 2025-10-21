@@ -31,6 +31,13 @@
                 socket.send(JSON.stringify({ type: "ping", interval: t }))
             }, t *= 2)
         })
+
+        // Connection error
+        socket.addEventListener("eror", console.error)
+
+        // Connection closed
+        socket.addEventListener("close", console.warn)
+
     </script>
 </body>
 

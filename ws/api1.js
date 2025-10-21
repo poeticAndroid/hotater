@@ -5,15 +5,12 @@ const wss = new ws.WebSocketServer({ noServer: true })
 
 const topics = {}
 
-wss.on('connection', function connection(ws) {
-    let id
+wss.on('connection', (ws, req) => {
+    let id = newId()
     let room
 
+    send({ id: id }, "id")
     ws.on('error', console.error)
-    ws.on('open', () => {
-        console.log("connection open")
-        send({ id: newId() }, "id")
-    })
 
     ws.on('message', (data) => {
         if (data.length > 1024 * 64) ws.close(1002, "too much!")

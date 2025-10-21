@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta http-equiv="refresh" content="840">
+    <title> T E S T </title>
     <style>
         html {
             background: black;
@@ -22,7 +23,7 @@
 
         // Connection opened
         socket.addEventListener("open", (event) => {
-            socket.send(JSON.stringify({ greeting: "Hello Server!" }))
+            socket.send(JSON.stringify({ greeting: "Hello Server!", time: Date.now() }))
         })
 
         // Listen for messages
@@ -57,9 +58,9 @@
             document.getElementById("output").textContent += str + eol
         }
 
-        setTimeout(() => {
-            location.reload(true)
-        }, (1000 * 60 * 15) - (Date.now() % (1000 * 60 * 15)))
+        setInterval(async () => {
+            timeLog((await fetch(".")).statusText)
+        }, 1000 * 60 * 15)
     </script>
 </body>
 

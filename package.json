@@ -1,0 +1,24 @@
+{
+  "name": "hotater",
+  "version": "0.0.1",
+  "description": "simple relay server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/poeticAndroid/hotater.git"
+  },
+  "keywords": [
+    "websockets",
+    "relay",
+    "server"
+  ],
+  "author": "poeticAndroid",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/poeticAndroid/hotater/issues"
+  },
+  "homepage": "https://github.com/poeticAndroid/hotater#readme"
+}

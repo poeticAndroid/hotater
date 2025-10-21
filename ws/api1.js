@@ -39,10 +39,11 @@ function parseJSON(json) {
     try { return JSON.parse(json) } catch (error) { }
 }
 
-const _idHash = crypto.createHash("sha256")
+let _idHash = 'crypto.createHash("sha256")'
 function newId() {
-    _idHash.update("?" + Date.now() + "&" + Math.random())
-    return _idHash.digest("base64url")
+    let hash = crypto.createHash("sha256")
+    hash.update(_idHash + "?" + Date.now() + "&" + Math.random())
+    return _idHash = hash.digest("base64url")
 }
 
 module.exports = wss

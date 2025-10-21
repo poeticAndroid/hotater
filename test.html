@@ -16,7 +16,7 @@
 <body>
     <pre id="output"></pre>
     <script>
-        let t = 1
+        let t = 262144
         // Create WebSocket connection.
         const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
 
@@ -29,7 +29,7 @@
         socket.addEventListener("message", (event) => {
             let latency = Date.now() - JSON.parse(event.data).echo.time
             timeLog(latency, "Message from server ", event.data)
-            setTimeout(e => { socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() })) }, t *= 2)
+            setTimeout(e => { socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() })) }, t)
         })
 
         // Connection error

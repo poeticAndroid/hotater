@@ -29,7 +29,9 @@
         socket.addEventListener("message", (event) => {
             let latency = Date.now() - JSON.parse(event.data).echo.time
             timeLog(latency, "Message from server ", event.data)
-            setTimeout(e => { socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() })) }, t)
+            setTimeout(e => {
+                socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
+            }, t)
         })
 
         // Connection error
@@ -54,6 +56,10 @@
         function print(str, eol = "\n") {
             document.getElementById("output").textContent += str + eol
         }
+
+        setTimeout(() => {
+            location.reload(true)
+        }, Date.now() % (1000 * 60 * 15))
     </script>
 </body>
 

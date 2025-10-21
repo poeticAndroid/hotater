@@ -5,10 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        html {
+            background: black;
+            color: white;
+        }
+    </style>
 </head>
 
 <body>
     <script>
+        let t = 1
         // Create WebSocket connection.
         const socket = new WebSocket("ws://localhost:9001/ws/api1")
 
@@ -20,6 +27,9 @@
         // Listen for messages
         socket.addEventListener("message", (event) => {
             console.log("Message from server ", event.data)
+            setTimeout(e => {
+                socket.send(JSON.stringify({ type: "ping", interval: t }))
+            }, t *= 2)
         })
     </script>
 </body>

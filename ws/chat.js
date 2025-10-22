@@ -3,111 +3,97 @@ const crypto = require("crypto")
 
 const wss = new ws.WebSocketServer({ noServer: true })
 
-const users = {}
 const topics = {}
 
 wss.on('connection', (ws, req) => {
-    let id = newId()
     let user, topic, room
 
     ws.on('error', console.error)
 
     ws.on('message', (msg) => {
-        let r
         if (msg.length > 1024 * 64) return ws.close(1009, "too much!")
         // console.log('message: %s', msg)
         if (!(msg = parseJSON(msg))) return ws.close(1007, "bad json")
 
         switch (msg.type) {
             case "user":
+                if (user) return ws.close(1002, "already user")
                 if (!msg.name) return ws.close(1002, "bad user")
                 if (typeof msg.name != "string") return ws.close(1002, "bad user")
 
-                users[id] = user = msg
-                send({ id: id }, "id")
+                user = {
+                    type: "user",
+                    id: newId(),
+                    name: msg.name,
+                    _ws: ws
+                }
+                send(user)
                 break;
 
             case "topic":
                 if (!user) return ws.close(1002, "no user")
-                if (!msg.name) return ws.close(1002, "bad topic")
-                if (typeof msg.name != "string") return ws.close(1002, "bad topic")
+                if (topic) return ws.close(1002, "already topic")
+                if (!msg.key) return ws.close(1002, "bad topic")
+                if (typeof msg.key != "string") return ws.close(1002, "bad topic")
 
-                topic = topics[msg.name] = topics[msg.name] || {}
-                r = []
-                for (let id in topic) {
-                    let room = topic[id]
-                    if (room.private) continue
-                    if (!room.open) continue
+                topic = topics[msg.key] = topics[msg.key] || {
+                    type: "topic",
+                    _key: msg.key,
+                    rooms: {}
+                }
+                for (let id in topic.rooms) {
+                    let room = topic.rooms[id]
                     let count = 0
                     for (let user in room.users) {
-                        if (room.users[user]?.readyState === WebSocket.OPEN) count++
+                        if (room.users[user]?._ws?.readyState === WebSocket.OPEN) count++
                         else delete room.users[user]
                     }
                     if (!count) {
-                        delete topic[id]
+                        delete topic.rooms[id]
                         continue
                     }
-                    r.push({ id: id, name: room.name, creator: users[room.creator] })
                 }
-                send({ rooms: r }, "rooms")
+                send(topic)
                 break;
 
             case "room":
                 if (!topic) return ws.close(1002, "no topic")
 
                 if (room) {
-                    if (room.creator != id) return ws.close(1008, "unauthorized")
-                    for (let key of ["open", "private"])
-                        if (msg[key] !== undefined) room[key] = msg[key]
+                    if (room.creator != user.id) return ws.close(1008, "unauthorized")
+                    if (msg.open !== undefined) room.open = msg.open
+                    if (room.open) delete topic.rooms[room.id]
+                    else topic.rooms[room.id] = room
                 } else if (msg.id) {
-                    room = topic[msg.id]
+                    room = topic.rooms[msg.id]
                     if (!room?.open) return ws.close(1002, "bad room")
                 } else if (msg.name) {
-                    room = { name: msg.name, creator: id, users: {}, open: true }
-                    topic[newId()] = room
+                    room = { type: "room", id: newId(), name: msg.name, creator: user.id, users: {}, open: true, private: msg.private }
+                    if (room.private) while (room.id.slice(0, 1) != "_") room.id = "_" + room.id
+                    else while (room.id.slice(0, 1) == "_") room.id = room.id.slice(1)
+                    topic.rooms[room.id] = room
                 } else {
                     return ws.close(1002, "bad room")
                 }
-                room.users[id] = ws
-                r = { name: room.name, creator: room.creator, open: room.open, private: room.private, users: {} }
+                room.users[user.id] = user
 
-                send(r, "room")
+                send(room)
                 break;
 
             case "msg":
                 if (!room) return ws.close(1002, "no room")
                 if (!msg.to) return ws.close(1002, "bad to")
 
-                msg.from = id
-                if (room.users[msg.to]?.readyState === WebSocket.OPEN) {
-                    room.users[msg.to].send(JSON.stringify(msg))
-                } else if (msg.to == "all") {
-                    for (let user in room.users) {
-                        if (room.users[user]?.readyState === WebSocket.OPEN) {
-                            room.users[user].send(JSON.stringify(msg))
-                        } else {
-                            delete room.users[user]
-                        }
-                    }
-                } else if (msg.to == "others") {
-                    for (let user in room.users) {
-                        if (room.users[user]?.readyState === WebSocket.OPEN) {
-                            if (user != id) room.users[user].send(JSON.stringify(msg))
-                        } else {
-                            delete room.users[user]
-                        }
-                    }
-                } else {
-                    delete room.users[msg.to]
-                }
+                msg.from = user.id
+                send(msg, msg.to == "others" ? user.id : null)
                 break;
 
 
             case "kick":
                 if (!room) return ws.close(1002, "no room")
-                if (room.creator != id) return ws.close(1008, "unauthorized")
+                if (room.creator != user.id) return ws.close(1008, "unauthorized")
 
-                if (room.users[msg.id]?.readyState === WebSocket.OPEN) room.users[msg.id].close(1008, "kicked")
+                if (room.users[msg.id]?._ws?.readyState === WebSocket.OPEN) room.users[msg.id]._ws.close(1008, "kicked")
                 delete room.users[msg.id]
                 break;
 
@@ -120,27 +106,42 @@ wss.on('connection', (ws, req) => {
     ws.on('close', (code, reason) => {
         console.log('closed: %d %s', code, reason)
 
-        delete users[id]
-        if (room) delete room.users[id]
+        if (room) {
+            send(room)
+            delete room.users[user.id]
+        }
     })
 
-    function send(msg, type = "msg", success = true) {
-        msg.id = newId()
-        msg.type = type
-        msg.success = success
-        ws.send(JSON.stringify(msg))
+    function send(msg, except) {
+        if (room) {
+            if (room.users[msg.to]?._ws?.readyState === WebSocket.OPEN)
+                room.users[msg.to]._ws.send(stringifyJSON(msg))
+            else for (let user in room.users) {
+                if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
+                    if (user != except) room.users[user]._ws.send(stringifyJSON(msg))
+                } else {
+                    delete room.users[user]
+                }
+            }
+        } else {
+            ws.send(stringifyJSON(msg))
+        }
     }
 })
 
-function parseJSON(json) {
-    try { return JSON.parse(json) } catch (error) { }
+function parseJSON(str) {
+    try { return JSON.parse(str) } catch (error) { }
+}
+
+function stringifyJSON(val) {
+    try { return JSON.stringify(val, (k, v) => k.slice(0, 1) == "_" ? undefined : v) } catch (error) { }
 }
 
 let _idHash = "Vau1giFtLn_vsv12gQXe6Mn7rgvJ4NnEJ122JxpDfvE"
 function newId() {
-    let hash = crypto.createHash("sha256")
+    let hash = crypto.createHash("md5")
     hash.update(_idHash + "?" + Date.now() + "&" + Math.random())
-    return _idHash = hash.digest("base64url")
+    return _idHash = hash.digest("base64").replaceAll("=", "")
 }
 
 module.exports = wss

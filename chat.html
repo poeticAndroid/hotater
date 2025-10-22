@@ -40,7 +40,7 @@
     </form>
     <script>
         let params = new URLSearchParams(location.search)
-        let id
+        let user, room
         let color = `hsl(${Math.round(Math.random() * 360)}deg, 50%, 50%)`
         // Create WebSocket connection.
         const ws = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/chat")
@@ -51,23 +51,27 @@
 
         // Listen for messages
         ws.addEventListener("message", (event) => {
-            console.log("Message from server ", event.data)
             let msg = JSON.parse(event.data)
+            console.log("Message from server ", msg)
             switch (msg.type) {
-                case "id":
+                case "user":
                     id = msg.id
-                    send({ type: "topic", name: "party" })
+                    send({ type: "topic", key: "chat" })
                     break;
 
-                case "rooms":
-                    for (let room of msg.rooms) {
-                        return send({ type: "room", id: room.id })
+                case "topic":
+                    for (let roomId in msg.rooms) {
+                        return send({ type: "room", id: roomId })
                     }
                     send({ type: "room", name: "party" })
                     break;
 
+                case "room":
+                    room = msg
+                    break;
+
                 case "msg":
-                    if (msg.content) print(msg.from + ": " + msg.content)
+                    if (msg.content) print(room.users[msg.from].name + ": " + msg.content)
                     if (msg.mouse) mouse(msg)
                     break;
 

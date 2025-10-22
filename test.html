@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title> T E S T </title>
     <style>
         html {
@@ -16,7 +16,7 @@
 <body>
     <pre id="output"></pre>
     <script>
-        let t = 262144
+        let t = 1
         // Create WebSocket connection.
         const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
 
@@ -31,7 +31,7 @@
             timeLog(latency, "Message from server ", event.data)
             setTimeout(e => {
                 socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
-            }, t)
+            }, t *= 2)
         })
 
         // Connection error

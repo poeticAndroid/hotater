@@ -13,7 +13,7 @@
         }
 
         body {
-            min-height: 99vh;
+            min-height: 90vh;
         }
 
         input {
@@ -55,8 +55,8 @@
             console.log("Message from server ", msg)
             switch (msg.type) {
                 case "user":
-                    id = msg.id
-                    send({ type: "topic", key: "chat" })
+                    user = msg
+                    sendHashKey()
                     break;
 
                 case "topic":
@@ -102,6 +102,7 @@
 
         function print(str, eol = "\n") {
             document.getElementById("output").textContent += str + eol
+            setTimeout(() => { scrollBy(0, 1024) }, 32)
         }
         function send(msg) {
             ws.send(JSON.stringify(msg))
@@ -118,6 +119,16 @@
             el.style.left = `${msg.mouse.x}px`
             el.style.top = `${msg.mouse.y}px`
             el.style.background = msg.mouse.c
+        }
+
+        async function sendHashKey() {
+            const encoder = new TextEncoder()
+            const data = encoder.encode(user.id + "&" + "bar")
+            const hash = new Uint8Array(await window.crypto.subtle.digest("SHA-256", data))
+            let hex = ""
+            for (let byte of hash) hex += byte.toString(16).padStart(2, "0")
+            console.log("hashKey", hex)
+            send({ type: "topic", key: hex })
         }
 
         setInterval(async () => {

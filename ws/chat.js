@@ -36,11 +36,13 @@ wss.on('connection', (ws, req) => {
                 if (!msg.key) return ws.close(1002, "bad topic")
                 if (typeof msg.key != "string") return ws.close(1002, "bad topic")
 
-                topic = topics[msg.key] = topics[msg.key] || {
+                topic = {
                     type: "topic",
-                    _key: msg.key,
+                    _key: dehash(user, msg.key),
                     rooms: {}
                 }
+                topic = topics[topic._key] = topics[topic._key] || topic
+
                 for (let id in topic.rooms) {
                     let room = topic.rooms[id]
                     let count = 0
@@ -133,8 +135,8 @@ function parseJSON(str) {
     try { return JSON.parse(str) } catch (error) { }
 }
 
-function stringifyJSON(val) {
-    try { return JSON.stringify(val, (k, v) => k.slice(0, 1) == "_" ? undefined : v) } catch (error) { }
+function stringifyJSON(val, indent) {
+    try { return JSON.stringify(val, (k, v) => k.slice(0, 1) == "_" ? undefined : v, indent) } catch (error) { }
 }
 
 let _idHash = "Vau1giFtLn_vsv12gQXe6Mn7rgvJ4NnEJ122JxpDfvE"
@@ -142,6 +144,20 @@ function newId() {
     let hash = crypto.createHash("md5")
     hash.update(_idHash + "?" + Date.now() + "&" + Math.random())
     return _idHash = hash.digest("base64").replaceAll("=", "")
+}
+
+function dehash(user, hash) {
+    let keys = process.env.CHAT_KEYS?.split(/\s+/)
+    if (!keys) return hash;
+    for (let key of keys) {
+        let hasher = crypto.createHash("sha256")
+        hasher.update(user.id + "&" + key)
+        if (hasher.digest("hex").toLowerCase() == hash.toLowerCase()) return key
+    }
+    setTimeout(() => {
+        user._ws.close(1008, "you know what you did")
+    }, 1024 * 64)
+    return "freeloader"
 }
 
 module.exports = wss

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hotater chat</title>
+    <style>
+        html {
+            background: black;
+            color: white;
+            font-size: 20px;
+        }
+
+        body {
+            min-height: 99vh;
+        }
+
+        input {
+            background: inherit;
+            color: inherit;
+            font-size: inherit;
+            width: 90%;
+            display: block;
+            margin: 1em auto;
+        }
+
+        .mouse {
+            position: absolute;
+            width: 1em;
+            height: 1em;
+        }
+    </style>
+</head>
+
+<body>
+    <pre id="output"></pre>
+    <form method="get">
+        <input id="userInp" name="name" type="text" autofocus />
+    </form>
+    <script>
+        let params = new URLSearchParams(location.search)
+        let id
+        let color = `hsl(${Math.round(Math.random() * 360)}deg, 50%, 50%)`
+        // Create WebSocket connection.
+        const ws = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/chat")
+
+        ws.addEventListener("open", (event) => {
+            send({ type: "user", name: params.get("name") })
+        })
+
+        // Listen for messages
+        ws.addEventListener("message", (event) => {
+            console.log("Message from server ", event.data)
+            let msg = JSON.parse(event.data)
+            switch (msg.type) {
+                case "id":
+                    id = msg.id
+                    send({ type: "topic", name: "party" })
+                    break;
+
+                case "rooms":
+                    for (let room of msg.rooms) {
+                        return send({ type: "room", id: room.id })
+                    }
+                    send({ type: "room", name: "party" })
+                    break;
+
+                case "msg":
+                    if (msg.content) print(msg.from + ": " + msg.content)
+                    if (msg.mouse) mouse(msg)
+                    break;
+
+                default:
+                    console.error("I dunno what to do with", msg)
+                    break;
+            }
+        })
+
+        // Connection error
+        ws.addEventListener("eror", console.error)
+
+        // Connection closed
+        ws.addEventListener("close", console.warn)
+
+        if (location.search)
+            document.querySelector("form").addEventListener("submit", e => {
+                e.preventDefault()
+                let userInp = document.getElementById("userInp").value
+                send({ type: "msg", to: "all", content: userInp })
+                document.getElementById("userInp").value = ""
+            })
+        else print("Enter username:")
+
+        document.body.addEventListener("mousemove", e => {
+            send({ type: "msg", to: "all", mouse: { x: e.pageX + 1, y: e.pageY + 1, c: color } })
+        })
+
+        function print(str, eol = "\n") {
+            document.getElementById("output").textContent += str + eol
+        }
+        function send(msg) {
+            ws.send(JSON.stringify(msg))
+        }
+
+        function mouse(msg) {
+            let el = document.getElementById("mouse_" + msg.from)
+            if (!el) {
+                el = document.createElement("div")
+                el.id = "mouse_" + msg.from
+                el.classList.add("mouse")
+                document.body.appendChild(el)
+            }
+            el.style.left = `${msg.mouse.x}px`
+            el.style.top = `${msg.mouse.y}px`
+            el.style.background = msg.mouse.c
+        }
+
+        setInterval(async () => {
+            let res = await fetch("/up.json?now=" + Date.now())
+            console.log("server ping", res.status, res.statusText)
+        }, 1000 * 60 * 15)
+    </script>
+</body>
+
+</html>

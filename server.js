@@ -32,6 +32,8 @@ server.on("upgrade", (req, socket, head) => {
 server.on("request", (req, res) => {
     res.setHeader("Cache-Control", "max-age=4096")
     let filename = "." + req.url
+    for (let char of "?&#;")
+        if (filename.includes(char)) filename = filename.slice(0, filename.indexOf(char))
     if (filename.slice(-1) === "/") {
         filename += "index.html"
     }

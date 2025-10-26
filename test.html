@@ -17,28 +17,33 @@
     <pre id="output"></pre>
     <script>
         let t = 1
-        // Create WebSocket connection.
-        const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
+        function init() {
+            const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
+            // Create WebSocket connection.
 
-        // Connection opened
-        socket.addEventListener("open", (event) => {
-            socket.send(JSON.stringify({ greeting: "Hello Server!", time: Date.now() }))
-        })
+            // Connection opened
+            socket.addEventListener("open", (event) => {
+                socket.send(JSON.stringify({ greeting: "Hello Server!", time: Date.now() }))
+            })
 
-        // Listen for messages
-        socket.addEventListener("message", (event) => {
-            let latency = Date.now() - JSON.parse(event.data)?.echo?.time
-            timeLog(latency, "Message from server ", event.data)
-            setTimeout(e => {
-                socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
-            }, t *= 2)
-        })
+            // Listen for messages
+            socket.addEventListener("message", (event) => {
+                let latency = Date.now() - JSON.parse(event.data)?.echo?.time
+                timeLog(latency, "Message from server ", event.data)
+                setTimeout(e => {
+                    socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
+                }, t *= 2)
+            })
 
-        // Connection error
-        socket.addEventListener("eror", timeError)
+            // Connection error
+            socket.addEventListener("eror", timeError)
 
-        // Connection closed
-        socket.addEventListener("close", timeWarn)
+            // Connection closed
+            socket.addEventListener("close", e => {
+                timeWarn(e)
+                setTimeout(init, 1024)
+            })
+        }
 
         function timeLog(...args) {
             console.log(now(), ...args)
@@ -56,11 +61,6 @@
         function print(str, eol = "\n") {
             document.getElementById("output").textContent += str + eol
         }
-
-        setInterval(async () => {
-            let res = await fetch("/up.json?now=" + Date.now())
-            timeLog("server ping", res.status, res.statusText)
-        }, 1000 * 60 * 15)
     </script>
 </body>
 

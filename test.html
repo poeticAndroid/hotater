@@ -19,12 +19,15 @@
         let t = 1
         function init() {
             let id = t++
+            let to
             // Create WebSocket connection.
             const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
 
             // Connection opened
             socket.addEventListener("open", (event) => {
-                socket.send(JSON.stringify({ greeting: "Hello Server!", time: Date.now() }))
+                to = setInterval(() => {
+                    socket.send(JSON.stringify({ greeting: "Hello Server!", time: Date.now() }))
+                }, 1024 * 64 * 5)
             })
 
             // Listen for messages
@@ -37,10 +40,15 @@
             })
 
             // Connection error
-            socket.addEventListener("eror", timeError)
+            socket.addEventListener("eror", e => {
+                clearInterval(to)
+                timeError(id, e)
+                // setTimeout(init, 1024)
+            })
 
             // Connection closed
             socket.addEventListener("close", e => {
+                clearInterval(to)
                 timeWarn(id, e)
                 // setTimeout(init, 1024)
             })

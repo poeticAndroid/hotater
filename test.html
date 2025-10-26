@@ -18,8 +18,8 @@
     <script>
         let t = 1
         function init() {
-            const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
             // Create WebSocket connection.
+            const socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/api1")
 
             // Connection opened
             socket.addEventListener("open", (event) => {
@@ -30,9 +30,9 @@
             socket.addEventListener("message", (event) => {
                 let latency = Date.now() - JSON.parse(event.data)?.echo?.time
                 timeLog(latency, "Message from server ", event.data)
-                setTimeout(e => {
-                    socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
-                }, t *= 2)
+                // setTimeout(e => {
+                //     socket.send(JSON.stringify({ type: "ping", interval: t, date: now(), time: Date.now() }))
+                // }, t *= 2)
             })
 
             // Connection error
@@ -41,7 +41,7 @@
             // Connection closed
             socket.addEventListener("close", e => {
                 timeWarn(e)
-                setTimeout(init, 1024)
+                // setTimeout(init, 1024)
             })
         }
 
@@ -63,6 +63,12 @@
         }
 
         init()
+        setInterval(init, 1024 * 64 * 8)
+
+        let d = new Date();
+        if (d.getMinutes() < 55) d.setHours(d.getHours(), 55, 0, 0)
+        else d.setHours(d.getHours() + 1, 0, 0, 0)
+        setTimeout(e => location.reload(true), d.getTime() - Date.now()) 
     </script>
 </body>
 

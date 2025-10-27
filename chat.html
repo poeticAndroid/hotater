@@ -52,7 +52,7 @@
         // Listen for messages
         ws.addEventListener("message", (event) => {
             let msg = JSON.parse(event.data)
-            console.log("Message from server ", msg)
+            // console.log("Message from server ", msg)
             switch (msg.type) {
                 case "user":
                     user = msg
@@ -73,6 +73,10 @@
                 case "msg":
                     if (msg.content) print(room.users[msg.from].name + ": " + msg.content)
                     if (msg.mouse) mouse(msg)
+                    break;
+
+                case "feedme":
+                    fetch(msg.url)
                     break;
 
                 default:
@@ -127,14 +131,8 @@
             const hash = new Uint8Array(await window.crypto.subtle.digest("SHA-256", data))
             let hex = ""
             for (let byte of hash) hex += byte.toString(16).padStart(2, "0")
-            console.log("hashKey", hex)
             send({ type: "topic", key: hex })
         }
-
-        setInterval(async () => {
-            let res = await fetch("/up.json?now=" + Date.now())
-            console.log("server ping", res.status, res.statusText)
-        }, 1000 * 60 * 15)
     </script>
 </body>
 

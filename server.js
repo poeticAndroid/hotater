@@ -63,9 +63,6 @@ server.on("request", (req, res) => {
             res.statusCode = 404
             res.setHeader("Content-Type", "text/html; charset=utf-8")
             res.end("<h1>nothing here")
-
-            let now = new Date()
-            fs.writeFileSync(filename, "<marquee>" + now.toString())
         } else {
             res.statusCode = 200
             res.end(data)

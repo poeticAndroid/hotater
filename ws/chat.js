@@ -5,7 +5,11 @@ const wss = new ws.WebSocketServer({ noServer: true })
 
 const topics = {}
 
+let hostname = "localhost"
+
 wss.on('connection', (ws, req) => {
+    hostname = req?.headers?.host || hostname
+
     let user, topic, room
 
     ws.on('error', console.error)
@@ -16,6 +20,11 @@ wss.on('connection', (ws, req) => {
         if (!(msg = parseJSON(msg))) return ws.close(1007, "bad json")
 
         switch (msg.type) {
+            case "ping":
+                msg.to = user?.id
+                send(msg)
+                break;
+
             case "user":
                 if (user) return ws.close(1002, "already user")
                 if (!msg.name) return ws.close(1002, "bad user")
@@ -64,16 +73,18 @@ wss.on('connection', (ws, req) => {
                 if (room) {
                     if (room.creator != user.id) return ws.close(1008, "unauthorized")
                     if (msg.open !== undefined) room.open = msg.open
-                    if (room.open) delete topic.rooms[room.id]
-                    else topic.rooms[room.id] = room
+                    if (room.open) topic.rooms[room.id] = room
+                    else delete topic.rooms[room.id]
                 } else if (msg.id) {
                     room = topic.rooms[msg.id]
                     if (!room?.open) return ws.close(1002, "bad room")
+                    console.log(user.name, "joined room", room.name)
                 } else if (msg.name) {
                     room = { type: "room", id: newId(), name: msg.name, creator: user.id, users: {}, open: true, private: msg.private }
                     if (room.private) while (room.id.slice(0, 1) != "_") room.id = "_" + room.id
                     else while (room.id.slice(0, 1) == "_") room.id = room.id.slice(1)
                     topic.rooms[room.id] = room
+                    console.log(user.name, "created room", room.name)
                 } else {
                     return ws.close(1002, "bad room")
                 }
@@ -106,8 +117,6 @@ wss.on('connection', (ws, req) => {
     })
 
     ws.on('close', (code, reason) => {
-        console.log('closed: %d %s', code, reason)
-
         if (room) {
             send(room)
             delete room.users[user.id]
@@ -148,7 +157,7 @@ function newId() {
 
 function dehash(user, hash) {
     let keys = process.env.CHAT_KEYS?.split(/\s+/)
-    if (!keys) return hash;
+    if (!keys) return "debug"
     for (let key of keys) {
         let hasher = crypto.createHash("sha256")
         hasher.update(user.id + "&" + key)
@@ -159,5 +168,14 @@ function dehash(user, hash) {
     }, 1024 * 64)
     return "freeloader"
 }
+
+
+setInterval(async () => {
+    for (let ws of wss.clients) {
+        if (ws?.readyState === WebSocket.OPEN) {
+            return ws.send(stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` }))
+        }
+    }
+}, 1000 * 60 * 14)
 
 module.exports = wss

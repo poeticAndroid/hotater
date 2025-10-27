@@ -34,6 +34,7 @@ wss.on('connection', (ws, req) => {
                     type: "user",
                     id: newId(),
                     name: msg.name,
+                    meta: msg.meta,
                     _ws: ws
                 }
                 send(user)
@@ -73,6 +74,7 @@ wss.on('connection', (ws, req) => {
                 if (room) {
                     if (room.creator != user.id) return ws.close(1008, "unauthorized")
                     if (msg.open !== undefined) room.open = msg.open
+                    if (msg.meta !== undefined) room.meta = msg.meta
                     if (room.open) topic.rooms[room.id] = room
                     else delete topic.rooms[room.id]
                 } else if (msg.id) {
@@ -80,7 +82,10 @@ wss.on('connection', (ws, req) => {
                     if (!room?.open) return ws.close(1002, "bad room")
                     console.log(user.name, "joined room", room.name)
                 } else if (msg.name) {
-                    room = { type: "room", id: newId(), name: msg.name, creator: user.id, users: {}, open: true, private: msg.private }
+                    room = {
+                        type: "room", id: newId(), name: msg.name, meta: msg.meta,
+                        creator: user.id, open: true, private: msg.private, users: {}
+                    }
                     if (room.private) while (room.id.slice(0, 1) != "_") room.id = "_" + room.id
                     else while (room.id.slice(0, 1) == "_") room.id = room.id.slice(1)
                     topic.rooms[room.id] = room

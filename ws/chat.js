@@ -73,21 +73,24 @@ wss.on('connection', (ws, req) => {
 
                 if (room) {
                     if (room.creator != user.id) return ws.close(1008, "unauthorized")
-                    if (msg.open !== undefined) room.open = msg.open
                     if (msg.meta !== undefined) room.meta = msg.meta
+                    if (msg.password !== undefined) room._password = msg.password
+                    if (msg.open !== undefined) room.open = msg.open
                     if (room.open) topic.rooms[room.id] = room
                     else delete topic.rooms[room.id]
                 } else if (msg.id) {
                     room = topic.rooms[msg.id]
                     if (!room?.open) return ws.close(1002, "bad room")
+                    if (room?._password != msg.password) return ws.close(1002, "bad room")
                     console.log(user.name, "joined room", room.name)
                 } else if (msg.name) {
                     room = {
-                        type: "room", id: newId(), name: msg.name, meta: msg.meta,
-                        creator: user.id, open: true, private: msg.private, users: {}
+                        type: "room", id: newId(), name: msg.name, meta: msg.meta, creator: user.id,
+                        open: true, private: !!(msg.password), _password: msg.password,
+                        users: {}
                     }
-                    if (room.private) while (room.id.slice(0, 1) != "_") room.id = "_" + room.id
-                    else while (room.id.slice(0, 1) == "_") room.id = room.id.slice(1)
+                    // if (room.private) while (room.id.slice(0, 1) != "_") room.id = "_" + room.id
+                    // else while (room.id.slice(0, 1) == "_") room.id = room.id.slice(1)
                     topic.rooms[room.id] = room
                     console.log(user.name, "created room", room.name)
                 } else {
@@ -123,6 +126,7 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', (code, reason) => {
         if (room) {
+            console.log(user.name, "left room", room.name, "because", code, reason)
             delete room.users[user.id]
             send(room)
         }

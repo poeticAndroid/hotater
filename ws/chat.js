@@ -118,8 +118,8 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', (code, reason) => {
         if (room) {
-            send(room)
             delete room.users[user.id]
+            send(room)
         }
     })
 

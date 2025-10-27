@@ -55,11 +55,13 @@
             // console.log("Message from server ", msg)
             switch (msg.type) {
                 case "user":
+                    console.log(msg)
                     user = msg
                     sendHashKey()
                     break;
 
                 case "topic":
+                    console.log(msg)
                     for (let roomId in msg.rooms) {
                         return send({ type: "room", id: roomId })
                     }
@@ -67,6 +69,7 @@
                     break;
 
                 case "room":
+                    console.log(msg)
                     room = msg
                     break;
 
@@ -76,6 +79,7 @@
                     break;
 
                 case "feedme":
+                    console.log(msg)
                     fetch(msg.url)
                     break;
 

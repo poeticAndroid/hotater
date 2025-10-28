@@ -33,10 +33,12 @@ wss.on('connection', (ws, req) => {
                 user = {
                     type: "user",
                     id: newId(),
+                    _origin: req?.headers?.origin || req?.headers?.referer || "",
                     name: msg.name,
                     meta: msg.meta,
                     _ws: ws
                 }
+                console.log(user.name, "connected from", user._origin)
                 send(user)
                 break;
 
@@ -126,7 +128,7 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', (code, reason) => {
         if (room) {
-            console.log(user.name, "left room", room.name, "because", code, reason)
+            console.log(user.name, "left room", room.name, "because", code, "" + reason)
             delete room.users[user.id]
             send(room)
         }
@@ -161,17 +163,19 @@ let _idHash = "Vau1giFtLn_vsv12gQXe6Mn7rgvJ4NnEJ122JxpDfvE"
 function newId() {
     let hash = crypto.createHash("md5")
     hash.update(_idHash + "?" + Date.now() + "&" + Math.random())
-    return _idHash = hash.digest("base64").replaceAll("=", "")
+    return _idHash = hash.digest("base64url").replaceAll("=", "").replaceAll("_", "").replaceAll("-", "")
 }
 
 function dehash(user, hash) {
     let keys = process.env.CHAT_KEYS?.split(/\s+/)
     if (!keys) return "debug"
     for (let key of keys) {
+        if (user._origin != key.slice(0, user._origin?.length)) continue
         let hasher = crypto.createHash("sha256")
-        hasher.update(user.id + "&" + key)
+        hasher.update(user.id + "@" + key)
         if (hasher.digest("hex").toLowerCase() == hash.toLowerCase()) return key
     }
+    console.log(user.name, "is a freeloader!")
     setTimeout(() => {
         user._ws.close(1008, "you know what you did")
     }, 1024 * 64)

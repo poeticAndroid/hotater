@@ -38,6 +38,7 @@ wss.on('connection', (ws, req) => {
                     meta: msg.meta,
                     _ws: ws
                 }
+                if (user._origin && user._origin.slice(-1) != "/") user._origin += "/"
                 console.log(user.name, "connected from", user._origin)
                 send(user)
                 break;
@@ -75,9 +76,11 @@ wss.on('connection', (ws, req) => {
 
                 if (room) {
                     if (room.creator != user.id) return ws.close(1008, "unauthorized")
+
                     if (msg.meta !== undefined) room.meta = msg.meta
                     if (msg.password !== undefined) room._password = msg.password
                     if (msg.open !== undefined) room.open = msg.open
+
                     if (room.open) topic.rooms[room.id] = room
                     else delete topic.rooms[room.id]
                 } else if (msg.id) {
@@ -130,23 +133,30 @@ wss.on('connection', (ws, req) => {
         if (room) {
             console.log(user.name, "left room", room.name, "because", code, "" + reason)
             delete room.users[user.id]
+            if (room.creator == user.id) {
+                room.creator = null
+                for (let id in room.users) {
+                    if (Math.random() || !room.creator) room.creator = id
+                }
+            }
             send(room)
         }
     })
 
     function send(msg, except) {
+        let jsn = stringifyJSON(msg)
         if (room) {
             if (room.users[msg.to]?._ws?.readyState === WebSocket.OPEN)
-                room.users[msg.to]._ws.send(stringifyJSON(msg))
+                room.users[msg.to]._ws.send(jsn)
             else for (let user in room.users) {
                 if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
-                    if (user != except) room.users[user]._ws.send(stringifyJSON(msg))
+                    if (user != except) room.users[user]._ws.send(jsn)
                 } else {
                     delete room.users[user]
                 }
             }
         } else {
-            ws.send(stringifyJSON(msg))
+            ws.send(jsn)
         }
     }
 })

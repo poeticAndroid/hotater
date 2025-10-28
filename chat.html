@@ -71,6 +71,11 @@
                 case "room":
                     console.log(msg)
                     room = msg
+                    room._usernames = []
+                    for (let id in room.users) {
+                        room._usernames.push(room.users[id].name)
+                    }
+                    print("present are " + JSON.stringify(room._usernames))
                     break;
 
                 case "msg":
@@ -90,10 +95,16 @@
         })
 
         // Connection error
-        ws.addEventListener("eror", console.error)
+        ws.addEventListener("eror", e => {
+            console.error(e)
+            print("Conntection error!")
+        })
 
         // Connection closed
-        ws.addEventListener("close", console.warn)
+        ws.addEventListener("close", e => {
+            console.warn(e)
+            print("Disconnected..")
+        })
 
         if (location.search)
             document.querySelector("form").addEventListener("submit", e => {

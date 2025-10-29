@@ -40,7 +40,7 @@
     </form>
     <script>
         let params = new URLSearchParams(location.search)
-        let user, room
+        let user, room, pointer_id
         let color = `hsl(${Math.round(Math.random() * 360)}deg, 50%, 50%)`
         // Create WebSocket connection.
         const ws = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/chat")
@@ -65,7 +65,7 @@
                     for (let roomId in msg.rooms) {
                         return send({ type: "room", id: roomId })
                     }
-                    send({ type: "room", name: "party" })
+                    send({ type: "room", name: "party", store_obj: 42 })
                     break;
 
                 case "room":
@@ -79,8 +79,11 @@
                     break;
 
                 case "msg":
-                    if (msg.content) print(room.users[msg.from].name + ": " + msg.content)
-                    if (msg.mouse) mouse(msg)
+                    print(room.users[msg.from].name + ": " + msg.content)
+                    break;
+
+                case "obj":
+                    mouse(msg)
                     break;
 
                 case "feedme":
@@ -116,7 +119,7 @@
         else print("Enter username:")
 
         document.body.addEventListener("mousemove", e => {
-            send({ type: "msg", to: "all", mouse: { x: e.pageX + 1, y: e.pageY + 1, c: color } })
+            send({ type: "obj", id: pointer_id, mouse: { x: e.pageX + 1, y: e.pageY + 1, c: color } })
         })
 
         function print(str, eol = "\n") {
@@ -128,6 +131,7 @@
         }
 
         function mouse(msg) {
+            if (msg.from == user.id) pointer_id = msg.id
             let el = document.getElementById("mouse_" + msg.from)
             if (!el) {
                 el = document.createElement("div")

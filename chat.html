@@ -112,6 +112,7 @@
         if (location.search)
             document.querySelector("form").addEventListener("submit", e => {
                 e.preventDefault()
+                if (!room) return;
                 let userInp = document.getElementById("userInp").value
                 send({ type: "msg", to: "all", content: userInp })
                 document.getElementById("userInp").value = ""
@@ -119,6 +120,7 @@
         else print("Enter username:")
 
         document.body.addEventListener("mousemove", e => {
+            if (!room) return;
             send({ type: "obj", id: pointer_id, mouse: { x: e.pageX + 1, y: e.pageY + 1, c: color } })
         })
 

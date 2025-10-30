@@ -15,6 +15,7 @@ server.on("upgrade", (req, socket, head) => {
             try {
                 WSServers[api] = require("./ws/" + api + ".js")
             } catch (error) {
+                console.error("Could not start server api", api, error)
                 WSServers[api] = null
                 socket.destroy()
                 return;

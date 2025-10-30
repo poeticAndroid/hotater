@@ -5,6 +5,13 @@ const fs = require("fs")
 const wss = new ws.WebSocketServer({ noServer: true })
 
 const topics = {}
+const stats = {
+    serverStartTime: Date.now(),
+    userCount: 0,
+    _inPerSec: 0, _outPerSec: 0,
+    _inPerMin: 0, _outPerMin: 0,
+    _inPerHr: 0, _outPerHr: 0,
+}
 
 let hostname = "localhost"
 
@@ -16,6 +23,7 @@ wss.on('connection', (ws, req) => {
     ws.on('error', console.error)
 
     ws.on('message', (msg) => {
+        stats._inPerSec += msg.length
         if (msg.length > 1024 * 64) return ws.close(1009, "too much!")
         // console.log('message: %s', msg)
         if (!(msg = parseJSON(msg))) return ws.close(1007, "bad json")
@@ -52,10 +60,12 @@ wss.on('connection', (ws, req) => {
                 topic = {
                     type: "topic",
                     _key: dehash(user, msg.key),
+                    user_count: 0,
                     rooms: {}
                 }
                 topic = topics[topic._key] = topics[topic._key] || topic
 
+                topic.user_count = 0
                 for (let id in topic.rooms) {
                     let room = topic.rooms[id]
                     let count = 0
@@ -63,6 +73,7 @@ wss.on('connection', (ws, req) => {
                         if (room.users[user]?._ws?.readyState === WebSocket.OPEN) count++
                         else delete room.users[user]
                     }
+                    topic.user_count += count
                     if (!count) {
                         delete topic.rooms[id]
                         continue
@@ -78,7 +89,6 @@ wss.on('connection', (ws, req) => {
                     if (room.host != user.id) return ws.close(1008, "unauthorized")
 
                     if (msg.meta !== undefined) room.meta = msg.meta
-                    if (msg.store_obj !== undefined) room.store_obj = Math.min(Math.abs(+msg.store_obj || 0), 2)
                     if (msg.password !== undefined) room._password = msg.password
                     if (msg.open !== undefined) room.open = msg.open
 
@@ -89,51 +99,34 @@ wss.on('connection', (ws, req) => {
                     if (!room?.open) return ws.close(1002, "bad room")
                     if (room?._password != msg.password) return ws.close(1002, "bad room")
                     if (room._objPath) processObj(room, user)
+                    topic.user_count++
                     console.log(user.name, "joined room", room.name)
                 } else if (msg.name) {
                     room = {
                         type: "room", id: newId(), name: "" + msg.name, meta: msg.meta, host: user.id,
                         open: true, private: !!(msg.password), _password: msg.password,
-                        store_obj: Math.min(Math.abs(+msg.store_obj || 0), 2),
                         _nextObjId: 1, users: {}
                     }
                     topic.rooms[room.id] = room
+                    topic.user_count++
                     console.log(user.name, "created room", room.name)
                 } else {
                     return ws.close(1002, "bad room")
                 }
                 room.users[user.id] = user
 
-                if (room.store_obj && !room._objPath) {
-                    room._objPath = `_chat_obj/${topic._key}/${room.id}`
-                    fs.mkdirSync(room._objPath, { recursive: true })
-                }
-
                 send(room)
                 break;
 
+            case "obj":
+                if (!room) return ws.close(1002, "no room")
+                msg.id = +msg.id || room._nextObjId++
             case "msg":
                 if (!room) return ws.close(1002, "no room")
-                if (!msg.to) return ws.close(1002, "bad to")
 
                 msg.from = user.id
                 send(msg, msg.to || "all")
                 break;
-
-
-            case "obj":
-                if (!room) return ws.close(1002, "no room")
-
-                msg.from = user.id
-                if (room.store_obj) {
-                    if (room.store_obj > 1 || room.host == user.id) {
-                        processObj(room, msg)
-                    }
-                }
-
-                send(msg, (room.store_obj == 1 && room.host != user.id) ? room.host : "all")
-                break;
-
 
             case "kick":
                 if (!room) return ws.close(1002, "no room")
@@ -151,6 +144,8 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', (code, reason) => {
         if (room) {
+            topic.user_count--
+            stats._outPerSec += reason.length
             console.log(user.name, "left room", room.name, "because", code, "" + reason)
             delete room.users[user.id]
             if (room.host == user.id) {
@@ -171,6 +166,7 @@ wss.on('connection', (ws, req) => {
                 case "everyone":
                     for (let user in room.users) {
                         if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
+                            stats._outPerSec += jsn.length
                             room.users[user]._ws.send(jsn)
                         } else {
                             delete room.users[user]
@@ -182,19 +178,28 @@ wss.on('connection', (ws, req) => {
                 case "others":
                     for (let user in room.users) {
                         if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
-                            if (user != msg.from) room.users[user]._ws.send(jsn)
+                            if (user != msg.from) {
+                                stats._outPerSec += jsn.length
+                                room.users[user]._ws.send(jsn)
+                            }
                         } else {
                             delete room.users[user]
                         }
                     }
                     break;
 
+                case "host":
+                case "admin":
+                    recipient = room.host
                 default:
-                    if (room.users[recipient]?._ws?.readyState === WebSocket.OPEN)
+                    if (room.users[recipient]?._ws?.readyState === WebSocket.OPEN) {
+                        stats._outPerSec += jsn.length
                         room.users[recipient]._ws.send(jsn)
+                    }
                     break;
             }
         } else {
+            stats._outPerSec += jsn.length
             ws.send(jsn)
         }
     }
@@ -233,62 +238,52 @@ function dehash(user, hash) {
 
 
 setInterval(async () => {
+    let msg = stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` })
     for (let ws of wss.clients) {
         if (ws?.readyState === WebSocket.OPEN) {
-            return ws.send(stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` }))
+            stats._outPerSec += msg.length
+            return ws.send(msg)
         }
     }
 }, 1000 * 60 * 14)
 
-let objTaskQueue = []
-let processingObj
-function processObj(room, task) {
-    if (task) objTaskQueue.push(arguments)
-    if (processingObj) return;
-    processingObj = !!(objTaskQueue.length)
-    if (!processingObj) return;
+let lastStats
+function updateStats() {
+    let now = new Date()
+    setTimeout(updateStats, 1000 - now.getMilliseconds())
+    stats._inPerMin += stats._inPerSec
+    stats._outPerMin += stats._outPerSec
+    stats._inPerHr += stats._inPerSec
+    stats._outPerHr += stats._outPerSec
 
-    if (objTaskQueue[0]?.[1]?.type == "user") {
-        let [room, user] = objTaskQueue.shift()
-        let id = 1
-        let sendObj = (err, data) => {
-            if (user?._ws?.readyState === WebSocket.OPEN) {
-                if (data) user._ws.send(data)
-                if (id < room._nextObjId) {
-                    fs.readFile(`${room._objPath}/obj_${id++}.json`, sendObj)
-                } else {
-                    processingObj = false
-                    setTimeout(processObj)
-                }
-            }
-        }
-        sendObj()
-    } else {
-        let [room, obj] = objTaskQueue.shift()
-        obj.id = +obj.id || room._nextObjId++
-        let tmp_file = `${room._objPath}/obj_${Math.random()}.tmp`
-        let obj_file = `${room._objPath}/obj_${obj.id}.json`
-        if (obj.deleted) {
-            fs.unlink(obj_file, nextObj)
-        } else {
-            fs.readFile(obj_file, (err, data) => {
-                data = parseJSON(data) || {}
-                for (let key in obj) {
-                    data[key] = obj[key]
-                }
-                fs.writeFile(tmp_file, stringifyJSON(data), err => {
-                    if (err) fs.unlink(tmp_file, nextObj)
-                    else fs.rename(tmp_file, obj_file, nextObj)
-                })
-            })
+    stats.inPerSec = stats._inPerSec
+    stats.outPerSec = stats._outPerSec
+    stats._inPerSec = 0
+    stats._outPerSec = 0
+    if (!now.getSeconds()) {
+        stats.inPerMin = stats._inPerMin
+        stats.outPerMin = stats._outPerMin
+        stats._inPerMin = 0
+        stats._outPerMin = 0
+        if (!now.getMinutes()) {
+            stats.inPerHr = stats._inPerHr
+            stats.outPerHr = stats._outPerHr
+            stats._inPerHr = 0
+            stats._outPerHr = 0
         }
     }
-}
 
-function nextObj() {
-    processingObj = false
-    setTimeout(processObj)
-}
+    stats.userCount = 0
+    for (let key in topics) {
+        stats.userCount += topics[key].user_count
+    }
 
+    let jsn = stringifyJSON(stats)
+    if (lastStats != jsn) {
+        lastStats = jsn
+        fs.writeFile("chat_stats.json", jsn, err => null)
+    }
+}
+setTimeout(updateStats, 1024)
 
 module.exports = wss

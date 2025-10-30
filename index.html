@@ -5,11 +5,44 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>hotater</title>
+    <style>
+        html {
+            background-color: #210;
+            color: #fed;
+        }
+    </style>
 </head>
 
 <body>
     <h1>hotater</h1>
     <p>is up and running!</p>
+    <pre id="output"></pre>
+    <script>
+        let interval = 1024
+        let stats = {}
+        async function update() {
+            try {
+                let resp = await fetch("chat_stats.json?now=" + Date.now())
+                stats = await resp.json()
+            } catch (error) { }
+            stats.serverStartTime = (new Date(stats.serverStartTime)).toString()
+
+            if (interval < 1024 * 64) {
+                if ((stats.inPerSec + stats.outPerSec)) interval /= 2
+                else interval *= 2
+            } else {
+                if (stats.inPerMin + stats.outPerMin) interval /= 2
+                else interval *= 2
+            }
+            interval = Math.max(interval, 1024)
+            document.getElementById("output").textContent =
+                `This update at ${new Date()}\n` +
+                `Next update at ${new Date(Date.now() + interval)}\n\n` +
+                JSON.stringify(stats, null, 2)
+            setTimeout(update, interval)
+        }
+        update()
+    </script>
 </body>
 
 </html>

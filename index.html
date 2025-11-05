@@ -10,16 +10,35 @@
             background-color: #210;
             color: #fed;
         }
+
+        canvas {
+            border: 1px solid #fed;
+        }
     </style>
 </head>
 
 <body>
     <h1>hotater</h1>
     <p>is up and running!</p>
+
     <pre id="output"></pre>
+
+    <canvas id="in_sec" width="720" height="100"></canvas>
+    <canvas id="out_sec" width="720" height="100"></canvas>
+    <canvas id="users_sec" width="720" height="100"></canvas>
+    <canvas id="in_min" width="720" height="100"></canvas>
+    <canvas id="out_min" width="720" height="100"></canvas>
+    <canvas id="users_min" width="720" height="100"></canvas>
+    <canvas id="in_hr" width="720" height="100"></canvas>
+    <canvas id="out_hr" width="720" height="100"></canvas>
+    <canvas id="users_hr" width="720" height="100"></canvas>
+
     <script>
         let interval = 1024
         let stats = {}
+        let sec_max = 1, min_max = 1, hr_max = 1
+        let users_sec_max = 1, users_min_max = 1, users_hr_max = 1
+
         async function update() {
             try {
                 let resp = await fetch("chat_stats.json?now=" + Date.now())
@@ -28,17 +47,119 @@
             stats.serverStartTime = (new Date(stats.serverStartTime)).toString()
 
             if (interval < 1024 * 64) {
-                if ((stats.inPerSec + stats.outPerSec)) interval /= 2
+                if ((stats.in.sec[stats.updateTime.sec] + stats.out.sec[stats.updateTime.sec])) interval /= 2
                 else interval *= 2
             } else {
-                if (stats.inPerMin + stats.outPerMin) interval /= 2
+                if ((stats.in.min[stats.updateTime.min] + stats.out.min[stats.updateTime.min])) interval /= 2
                 else interval *= 2
             }
             interval = Math.max(interval, 1024)
             document.getElementById("output").textContent =
-                `This update at ${new Date()}\n` +
-                `Next update at ${new Date(Date.now() + interval)}\n\n` +
-                JSON.stringify(stats, null, 2)
+                `Server start at ${stats.serverStartTime}\n` +
+                `This update  at ${new Date()}\n` +
+                `Next update  at ${new Date(Date.now() + interval)}\n\n` // +
+            // JSON.stringify(stats, null, 2)
+
+            let fill = "white"
+            let canvas = document.querySelector("canvas")
+            let g = canvas.getContext("2d")
+            let k = canvas.height / sec_max
+
+
+            canvas = document.getElementById("in_sec")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let sec = 0; sec < 60; sec++) {
+                let i = (stats.updateTime.sec + sec) % 60
+                g.fillRect(sec * 12, 100 - stats.in.sec[i] * k, 12, 100)
+                sec_max = Math.max(sec_max, stats.in.sec[i] || 0)
+            }
+            canvas = document.getElementById("out_sec")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let sec = 0; sec < 60; sec++) {
+                let i = (stats.updateTime.sec + sec) % 60
+                g.fillRect(sec * 12, 100 - stats.out.sec[i] * k, 12, 1024)
+                sec_max = Math.max(sec_max, stats.out.sec[i] || 0)
+            }
+            k = canvas.height / users_sec_max
+            canvas = document.getElementById("users_sec")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let sec = 0; sec < 60; sec++) {
+                let i = (stats.updateTime.sec + sec) % 60
+                g.fillRect(sec * 12, 100 - stats.users.sec[i] * k, 12, 1024)
+                users_sec_max = Math.max(users_sec_max, stats.users.sec[i] || 0)
+            }
+
+            k = canvas.height / min_max
+
+            canvas = document.getElementById("in_min")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let min = 0; min < 60; min++) {
+                let i = (stats.updateTime.min + min) % 60
+                g.fillRect(min * 12, 100 - stats.in.min[i] * k, 12, 100)
+                min_max = Math.max(min_max, stats.in.min[i] || 0)
+                console.log(stats.in.min[i])
+            }
+            canvas = document.getElementById("out_min")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let min = 0; min < 60; min++) {
+                let i = (stats.updateTime.min + min) % 60
+                g.fillRect(min * 12, 100 - stats.out.min[i] * k, 12, 1024)
+                min_max = Math.max(min_max, stats.out.min[i] || 0)
+            }
+            k = canvas.height / users_min_max
+            canvas = document.getElementById("users_min")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let min = 0; min < 60; min++) {
+                let i = (stats.updateTime.min + min) % 60
+                g.fillRect(min * 12, 100 - stats.users.min[i] * k, 12, 1024)
+                users_min_max = Math.max(users_min_max, stats.users.min[i] || 0)
+            }
+
+            k = canvas.height / hr_max
+
+            canvas = document.getElementById("in_hr")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let hr = 0; hr < 60; hr++) {
+                let i = (stats.updateTime.hr + hr) % 60
+                g.fillRect(hr * 12, 100 - stats.in.hr[i] * k, 12, 100)
+                hr_max = Math.max(hr_max, stats.in.hr[i] || 0)
+                console.log(stats.in.hr[i])
+            }
+            canvas = document.getElementById("out_hr")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let hr = 0; hr < 60; hr++) {
+                let i = (stats.updateTime.hr + hr) % 60
+                g.fillRect(hr * 12, 100 - stats.out.hr[i] * k, 12, 1024)
+                hr_max = Math.max(hr_max, stats.out.hr[i] || 0)
+            }
+            k = canvas.height / users_hr_max
+            canvas = document.getElementById("users_hr")
+            g = canvas.getContext("2d")
+            g.clearRect(0, 0, 1024, 1024)
+            g.fillStyle = fill
+            for (let hr = 0; hr < 60; hr++) {
+                let i = (stats.updateTime.hr + hr) % 60
+                g.fillRect(hr * 12, 100 - stats.users.hr[i] * k, 12, 1024)
+                users_hr_max = Math.max(users_hr_max, stats.users.hr[i] || 0)
+            }
+
+
             setTimeout(update, interval)
         }
         update()

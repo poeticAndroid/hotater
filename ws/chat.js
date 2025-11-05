@@ -7,10 +7,11 @@ const wss = new ws.WebSocketServer({ noServer: true })
 const topics = {}
 const stats = {
     serverStartTime: Date.now(),
-    userCount: 0,
-    _inPerSec: 0, _outPerSec: 0,
-    _inPerMin: 0, _outPerMin: 0,
-    _inPerHr: 0, _outPerHr: 0,
+    updateTime: { hr: -1, min: -1, sec: -1 },
+    _in: 0, _out: 0, _users: 0,
+    in: { hr: [], min: [], sec: [] },
+    out: { hr: [], min: [], sec: [] },
+    users: { hr: [], min: [], sec: [] },
 }
 
 let hostname = "localhost"
@@ -23,7 +24,7 @@ wss.on('connection', (ws, req) => {
     ws.on('error', console.error)
 
     ws.on('message', (msg) => {
-        stats._inPerSec += msg.length
+        stats._in += msg.length
         if (msg.length > 1024 * 64) return ws.close(1009, "too much!")
         // console.log('message: %s', msg)
         if (!(msg = parseJSON(msg))) return ws.close(1007, "bad json")
@@ -145,7 +146,7 @@ wss.on('connection', (ws, req) => {
     ws.on('close', (code, reason) => {
         if (room) {
             topic.user_count--
-            stats._outPerSec += reason.length
+            stats._out += reason.length
             console.log(user.name, "left room", room.name, "because", code, "" + reason)
             delete room.users[user.id]
             if (room.host == user.id) {
@@ -166,7 +167,7 @@ wss.on('connection', (ws, req) => {
                 case "everyone":
                     for (let user in room.users) {
                         if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
-                            stats._outPerSec += jsn.length
+                            stats._out += jsn.length
                             room.users[user]._ws.send(jsn)
                         } else {
                             delete room.users[user]
@@ -179,7 +180,7 @@ wss.on('connection', (ws, req) => {
                     for (let user in room.users) {
                         if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
                             if (user != msg.from) {
-                                stats._outPerSec += jsn.length
+                                stats._out += jsn.length
                                 room.users[user]._ws.send(jsn)
                             }
                         } else {
@@ -193,13 +194,13 @@ wss.on('connection', (ws, req) => {
                     recipient = room.host
                 default:
                     if (room.users[recipient]?._ws?.readyState === WebSocket.OPEN) {
-                        stats._outPerSec += jsn.length
+                        stats._out += jsn.length
                         room.users[recipient]._ws.send(jsn)
                     }
                     break;
             }
         } else {
-            stats._outPerSec += jsn.length
+            stats._out += jsn.length
             ws.send(jsn)
         }
     }
@@ -241,7 +242,7 @@ setInterval(async () => {
     let msg = stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` })
     for (let ws of wss.clients) {
         if (ws?.readyState === WebSocket.OPEN) {
-            stats._outPerSec += msg.length
+            stats._out += msg.length
             return ws.send(msg)
         }
     }
@@ -251,32 +252,48 @@ let lastStats
 function updateStats() {
     let now = new Date()
     setTimeout(updateStats, 1000 - now.getMilliseconds())
-    stats._inPerMin += stats._inPerSec
-    stats._outPerMin += stats._outPerSec
-    stats._inPerHr += stats._inPerSec
-    stats._outPerHr += stats._outPerSec
 
-    stats.inPerSec = stats._inPerSec
-    stats.outPerSec = stats._outPerSec
-    stats._inPerSec = 0
-    stats._outPerSec = 0
-    if (!now.getSeconds()) {
-        stats.inPerMin = stats._inPerMin
-        stats.outPerMin = stats._outPerMin
-        stats._inPerMin = 0
-        stats._outPerMin = 0
-        if (!now.getMinutes()) {
-            stats.inPerHr = stats._inPerHr
-            stats.outPerHr = stats._outPerHr
-            stats._inPerHr = 0
-            stats._outPerHr = 0
+    stats._users = 0
+    for (let key in topics) {
+        stats._users += topics[key].user_count
+    }
+
+    if (stats.updateTime.sec != now.getSeconds()) {
+        stats.updateTime.sec = now.getSeconds()
+        stats.in.sec[stats.updateTime.sec] = 0
+        stats.out.sec[stats.updateTime.sec] = 0
+        stats.users.sec[stats.updateTime.sec] = 0
+        if (stats.updateTime.min != now.getMinutes()) {
+            stats.updateTime.min = now.getMinutes()
+            stats.in.min[stats.updateTime.min] = 0
+            stats.out.min[stats.updateTime.min] = 0
+            stats.users.min[stats.updateTime.min] = 0
+            if (stats.updateTime.hr != now.getHours()) {
+                stats.updateTime.hr = now.getHours()
+                stats.in.hr[stats.updateTime.hr] = 0
+                stats.out.hr[stats.updateTime.hr] = 0
+                stats.users.hr[stats.updateTime.hr] = 0
+            }
         }
     }
 
-    stats.userCount = 0
-    for (let key in topics) {
-        stats.userCount += topics[key].user_count
-    }
+
+    stats.in.sec[stats.updateTime.sec] += stats._in
+    stats.out.sec[stats.updateTime.sec] += stats._out
+    stats.users.sec[stats.updateTime.sec] = stats._users
+
+    stats.in.min[stats.updateTime.min] += stats._in
+    stats.out.min[stats.updateTime.min] += stats._out
+    stats.users.min[stats.updateTime.min] = stats._users
+
+    stats.in.hr[stats.updateTime.hr] += stats._in
+    stats.out.hr[stats.updateTime.hr] += stats._out
+    stats.users.hr[stats.updateTime.hr] = stats._users
+
+    stats._in = 0
+    stats._out = 0
+    stats._users = 0
+
 
     let jsn = stringifyJSON(stats)
     if (lastStats != jsn) {

@@ -31,6 +31,7 @@ wss.on('connection', (ws, req) => {
 
         switch (msg.type) {
             case "ping":
+                msg.server_time = Date.now()
                 send(msg, user?.id)
                 break;
 

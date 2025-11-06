@@ -1,8 +1,8 @@
-const ws = require("ws")
+const WS = require("ws")
 const crypto = require("crypto")
 const fs = require("fs")
 
-const wss = new ws.WebSocketServer({ noServer: true })
+const wss = new WS.WebSocketServer({ noServer: true })
 
 const topics = {}
 const stats = {
@@ -72,7 +72,7 @@ wss.on('connection', (ws, req) => {
                     let room = topic.rooms[id]
                     let count = 0
                     for (let user in room.users) {
-                        if (room.users[user]?._ws?.readyState === WebSocket.OPEN) count++
+                        if (room.users[user]?._ws?.readyState === WS.WebSocket.OPEN) count++
                         else delete room.users[user]
                     }
                     topic.user_count += count
@@ -134,7 +134,7 @@ wss.on('connection', (ws, req) => {
                 if (!room) return ws.close(1002, "no room")
                 if (room.host != user.id) return ws.close(1008, "unauthorized")
 
-                if (room.users[msg.id]?._ws?.readyState === WebSocket.OPEN) room.users[msg.id]._ws.close(1008, "kicked")
+                if (room.users[msg.id]?._ws?.readyState === WS.WebSocket.OPEN) room.users[msg.id]._ws.close(1008, "kicked")
                 delete room.users[msg.id]
                 break;
 
@@ -167,7 +167,7 @@ wss.on('connection', (ws, req) => {
                 case "all":
                 case "everyone":
                     for (let user in room.users) {
-                        if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
+                        if (room.users[user]?._ws?.readyState === WS.WebSocket.OPEN) {
                             stats._out += jsn.length
                             room.users[user]._ws.send(jsn)
                         } else {
@@ -179,7 +179,7 @@ wss.on('connection', (ws, req) => {
                 case "other":
                 case "others":
                     for (let user in room.users) {
-                        if (room.users[user]?._ws?.readyState === WebSocket.OPEN) {
+                        if (room.users[user]?._ws?.readyState === WS.WebSocket.OPEN) {
                             if (user != msg.from) {
                                 stats._out += jsn.length
                                 room.users[user]._ws.send(jsn)
@@ -194,7 +194,7 @@ wss.on('connection', (ws, req) => {
                 case "admin":
                     recipient = room.host
                 default:
-                    if (room.users[recipient]?._ws?.readyState === WebSocket.OPEN) {
+                    if (room.users[recipient]?._ws?.readyState === WS.WebSocket.OPEN) {
                         stats._out += jsn.length
                         room.users[recipient]._ws.send(jsn)
                     }
@@ -242,7 +242,7 @@ function dehash(user, hash) {
 setInterval(async () => {
     let msg = stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` })
     for (let ws of wss.clients) {
-        if (ws?.readyState === WebSocket.OPEN) {
+        if (ws?.readyState === WS.WebSocket.OPEN) {
             stats._out += msg.length
             return ws.send(msg)
         }

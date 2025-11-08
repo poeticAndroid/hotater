@@ -37,7 +37,7 @@
     <canvas id="users_hr" width="720" height="256"></canvas>
 
     <script>
-        let interval = 1024
+        let interval = 1
         let stats = {}
         let zoom = {
             inout: { sec: 1, min: 1, hr: 1 },
@@ -50,11 +50,7 @@
                 let resp = await fetch("ws/chat")
                 stats = await resp.json()
             } catch (error) {
-                stats = {}
-                zoom = {
-                    inout: { sec: 1, min: 1, hr: 1 },
-                    users: { sec: 1, min: 1, hr: 1 }
-                }
+                if (stats.serverStartTime) location.reload(true)
             }
 
             if (!stats.serverStartTime) interval *= 2

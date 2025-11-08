@@ -49,7 +49,13 @@
             try {
                 let resp = await fetch("ws/chat")
                 stats = await resp.json()
-            } catch (error) { }
+            } catch (error) {
+                stats = {}
+                zoom = {
+                    inout: { sec: 1, min: 1, hr: 1 },
+                    users: { sec: 1, min: 1, hr: 1 }
+                }
+            }
 
             if (!stats.serverStartTime) interval *= 2
             else if ((stats.in.min[stats.updateTime.min] + stats.out.min[stats.updateTime.min])) interval /= 2

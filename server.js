@@ -31,6 +31,17 @@ server.on("upgrade", (req, socket, head) => {
 })
 
 server.on("request", (req, res) => {
+    if (req.url.slice(0, 4) == "/ws/") {
+        let api = req.url.split("/").pop()
+        if (WSServers[api]) {
+            res.end(JSON.stringify(WSServers[api].stats))
+        } else {
+            res.statusCode = 404
+            res.setHeader("Content-Type", "text/html; charset=utf-8")
+            res.end("<h1> not yet ")
+        }
+        return;
+    }
     res.setHeader("Cache-Control", "max-age=4096")
     let filename = "." + req.url
     for (let char of "?&#;")

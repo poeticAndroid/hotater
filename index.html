@@ -41,19 +41,19 @@
 
         async function update() {
             try {
-                let resp = await fetch("chat_stats.json?now=" + Date.now())
+                let resp = await fetch("ws/chat")
                 stats = await resp.json()
             } catch (error) { }
-            stats.serverStartTime = (new Date(stats.serverStartTime)).toString()
 
-            if ((stats.in.min[stats.updateTime.min] + stats.out.min[stats.updateTime.min])) interval /= 2
+            if (!stats.serverStartTime) interval *= 2
+            else if ((stats.in.min[stats.updateTime.min] + stats.out.min[stats.updateTime.min])) interval /= 2
             else interval *= 2
             interval = Math.max(interval, 1024)
             document.getElementById("output").textContent =
-                `Server start at ${stats.serverStartTime}\n` +
+                `Server start at ${(new Date(stats.serverStartTime)).toString()}\n` +
                 `This update  at ${new Date()}\n` +
-                `Next update  at ${new Date(Date.now() + interval)}\n\n` // +
-            // JSON.stringify(stats, null, 2)
+                `Next update  at ${new Date(Date.now() + interval)}\n\n`
+            setTimeout(update, interval)
 
             let fill = "#987"
             let canvas = document.querySelector("canvas")
@@ -100,7 +100,6 @@
                 let i = (stats.updateTime.min + min) % 60
                 g.fillRect(min * 12, 100 - stats.in.min[i] * k, 12, 100)
                 min_max = Math.max(min_max, stats.in.min[i] || 0)
-                console.log(stats.in.min[i])
             }
             canvas = document.getElementById("out_min")
             g = canvas.getContext("2d")
@@ -132,7 +131,6 @@
                 let i = (stats.updateTime.hr + hr) % 24
                 g.fillRect(hr * 30, 100 - stats.in.hr[i] * k, 30, 100)
                 hr_max = Math.max(hr_max, stats.in.hr[i] || 0)
-                console.log(stats.in.hr[i])
             }
             canvas = document.getElementById("out_hr")
             g = canvas.getContext("2d")
@@ -153,9 +151,6 @@
                 g.fillRect(hr * 30, 100 - stats.users.hr[i] * k, 30, 1024)
                 users_hr_max = Math.max(users_hr_max, stats.users.hr[i] || 0)
             }
-
-
-            setTimeout(update, interval)
         }
         update()
     </script>

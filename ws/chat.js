@@ -296,12 +296,13 @@ function updateStats() {
     stats._users = 0
 
 
-    let jsn = stringifyJSON(stats)
-    if (lastStats != jsn) {
-        lastStats = jsn
-        fs.writeFile("chat_stats.json", jsn, err => null)
-    }
+    // let jsn = stringifyJSON(stats)
+    // if (lastStats != jsn) {
+    //     lastStats = jsn
+    //     fs.writeFile("chat_stats.json", jsn, err => null)
+    // }
 }
 setTimeout(updateStats, 1024)
 
+wss.stats = stats
 module.exports = wss

@@ -39,7 +39,7 @@
     <script>
         let interval = 1024
         let stats = {}
-        let max = {
+        let zoom = {
             inout: { sec: 1, min: 1, hr: 1 },
             users: { sec: 1, min: 1, hr: 1 }
         }
@@ -85,21 +85,22 @@
 
         function updateCanvas(prop, int) {
             let canvas = document.getElementById(`${prop}_${int}`)
-            let k = canvas.height / max[prop == "users" ? "users" : "inout"][int]
+            let k = canvas.height / zoom[prop == "users" ? "users" : "inout"][int]
             let g = canvas.getContext("2d")
             let len = int == "hr" ? 24 : 60
-            let sum = 0
+            let sum = 0, max = 0
             g.clearRect(0, 0, canvas.width, canvas.height)
             g.fillStyle = fill
             for (let t = 0; t < len; t++) {
                 let i = (stats.updateTime[int] + t) % len
                 g.fillRect(t * (canvas.width / len), canvas.height - stats[prop][int][i] * k, canvas.width / len, canvas.height)
-                if (stats[prop][int][i] > max[prop == "users" ? "users" : "inout"][int])
-                    max[prop == "users" ? "users" : "inout"][int] *= 2
+                if (stats[prop][int][i] > zoom[prop == "users" ? "users" : "inout"][int])
+                    zoom[prop == "users" ? "users" : "inout"][int] *= 2
                 if (t) sum += stats[prop][int][i] || 0
+                max = Math.max(max, stats[prop][int][i] || 0)
             }
             len--
-            canvas.title = `${prop == "users" ? (sum / len) : human(sum / len)} ${prop} per ${int}`
+            canvas.title = `avr: ${prop == "users" ? (sum / len) : human(sum / len)} ${prop} per ${int}\nmax: ${prop == "users" ? (max) : human(max)} ${prop} per ${int}`
         }
 
         function human(bytes) {

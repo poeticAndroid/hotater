@@ -39,8 +39,11 @@
     <script>
         let interval = 1024
         let stats = {}
-        let sec_max = 1, min_max = 1, hr_max = 1
-        let users_sec_max = 1, users_min_max = 1, users_hr_max = 1
+        let max = {
+            inout: { sec: 1, min: 1, hr: 1 },
+            users: { sec: 1, min: 1, hr: 1 }
+        }
+        let fill = "#987"
 
         async function update() {
             try {
@@ -64,130 +67,40 @@
             let sum = 0
 
             // seconds
-            let k = canvas.height / sec_max
-
-            canvas = document.getElementById("in_sec")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let sec = 0; sec < 60; sec++) {
-                let i = (stats.updateTime.sec + sec) % 60
-                g.fillRect(sec * 12, canvas.height - stats.in.sec[i] * k, 12, 1024)
-                if (stats.in.sec[i] > sec_max) sec_max *= 2
-                sum += stats.in.sec[i] || 0
-            }
-            canvas.title = `${human(sum / 60)} in per second`
-            canvas = document.getElementById("out_sec")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let sec = 0; sec < 60; sec++) {
-                let i = (stats.updateTime.sec + sec) % 60
-                g.fillRect(sec * 12, canvas.height - stats.out.sec[i] * k, 12, 1024)
-                if (stats.out.sec[i] > sec_max) sec_max *= 2
-                sum += stats.out.sec[i] || 0
-            }
-            canvas.title = `${human(sum / 60)} out per second`
-            k = canvas.height / users_sec_max
-            canvas = document.getElementById("users_sec")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let sec = 0; sec < 60; sec++) {
-                let i = (stats.updateTime.sec + sec) % 60
-                g.fillRect(sec * 12, canvas.height - stats.users.sec[i] * k, 12, 1024)
-                if (stats.users.sec[i] > users_sec_max) users_sec_max *= 2
-                sum += stats.users.sec[i] || 0
-            }
-            canvas.title = `${(sum / 60)} users per second`
+            updateCanvas("in", "sec")
+            updateCanvas("out", "sec")
+            updateCanvas("users", "sec")
 
             // minutes
-            k = canvas.height / min_max
-
-            canvas = document.getElementById("in_min")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let min = 0; min < 60; min++) {
-                let i = (stats.updateTime.min + min) % 60
-                g.fillRect(min * 12, canvas.height - stats.in.min[i] * k, 12, 1024)
-                if (stats.in.min[i] > min_max) min_max *= 2
-                sum += stats.in.min[i] || 0
-            }
-            canvas.title = `${human(sum / 60)} in per minute`
-            canvas = document.getElementById("out_min")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let min = 0; min < 60; min++) {
-                let i = (stats.updateTime.min + min) % 60
-                g.fillRect(min * 12, canvas.height - stats.out.min[i] * k, 12, 1024)
-                if (stats.out.min[i] > min_max) min_max *= 2
-                sum += stats.out.min[i] || 0
-            }
-            canvas.title = `${human(sum / 60)} out per minute`
-            k = canvas.height / users_min_max
-            canvas = document.getElementById("users_min")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let min = 0; min < 60; min++) {
-                let i = (stats.updateTime.min + min) % 60
-                g.fillRect(min * 12, canvas.height - stats.users.min[i] * k, 12, 1024)
-                if (stats.users.min[i] > users_min_max) users_min_max *= 2
-                sum += stats.users.min[i] || 0
-            }
-            canvas.title = `${(sum / 60)} users per minute`
+            updateCanvas("in", "min")
+            updateCanvas("out", "min")
+            updateCanvas("users", "min")
 
             // hours
-            k = canvas.height / hr_max
-
-            canvas = document.getElementById("in_hr")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let hr = 0; hr < 24; hr++) {
-                let i = (stats.updateTime.hr + hr) % 24
-                g.fillRect(hr * 30, canvas.height - stats.in.hr[i] * k, 30, 1024)
-                if (stats.in.hr[i] > hr_max) hr_max *= 2
-                sum += stats.in.hr[i] || 0
-            }
-            canvas.title = `${human(sum / 24)} in per hour`
-            canvas = document.getElementById("out_hr")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let hr = 0; hr < 24; hr++) {
-                let i = (stats.updateTime.hr + hr) % 24
-                g.fillRect(hr * 30, canvas.height - stats.out.hr[i] * k, 30, 1024)
-                if (stats.out.hr[i] > hr_max) hr_max *= 2
-                sum += stats.out.hr[i] || 0
-            }
-            canvas.title = `${human(sum / 24)} out per hour`
-            k = canvas.height / users_hr_max
-            canvas = document.getElementById("users_hr")
-            g = canvas.getContext("2d")
-            g.clearRect(0, 0, 1024, 1024)
-            g.fillStyle = fill
-            sum = 0
-            for (let hr = 0; hr < 24; hr++) {
-                let i = (stats.updateTime.hr + hr) % 24
-                g.fillRect(hr * 30, canvas.height - stats.users.hr[i] * k, 30, 1024)
-                if (stats.users.hr[i] > users_hr_max) users_hr_max *= 2
-                sum += stats.users.hr[i] || 0
-            }
-            canvas.title = `${(sum / 24)} users per hour`
+            updateCanvas("in", "hr")
+            updateCanvas("out", "hr")
+            updateCanvas("users", "hr")
         }
         update()
 
+        function updateCanvas(prop, int) {
+            let canvas = document.getElementById(`${prop}_${int}`)
+            let k = canvas.height / max[prop == "users" ? "users" : "inout"][int]
+            let g = canvas.getContext("2d")
+            let len = int == "hr" ? 24 : 60
+            let sum = 0
+            g.clearRect(0, 0, canvas.width, canvas.height)
+            g.fillStyle = fill
+            for (let t = 0; t < len; t++) {
+                let i = (stats.updateTime[int] + t) % len
+                g.fillRect(t * (canvas.width / len), canvas.height - stats[prop][int][i] * k, canvas.width / len, canvas.height)
+                if (stats[prop][int][i] > max[prop == "users" ? "users" : "inout"][int])
+                    max[prop == "users" ? "users" : "inout"][int] *= 2
+                if (t) sum += stats[prop][int][i] || 0
+            }
+            len--
+            canvas.title = `${prop == "users" ? (sum / len) : human(sum / len)} ${prop} per ${int}`
+        }
 
         function human(bytes) {
             let unit = "bytes"

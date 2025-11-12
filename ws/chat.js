@@ -117,6 +117,7 @@ wss.on('connection', (ws, req) => {
                 room.users[user.id] = user
 
                 send(room)
+                clearTimeout(patience)
                 break;
 
             case "obj":
@@ -203,6 +204,8 @@ wss.on('connection', (ws, req) => {
             ws.send(jsn)
         }
     }
+
+    let patience = setTimeout(() => { ws.close(1008, "timeout") }, 4096)
 })
 
 function parseJSON(str) {

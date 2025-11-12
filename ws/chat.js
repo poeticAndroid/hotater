@@ -106,8 +106,7 @@ wss.on('connection', (ws, req) => {
                 } else if (msg.name) {
                     room = {
                         type: "room", id: newId(), name: "" + msg.name, meta: msg.meta, host: user.id,
-                        open: true, private: !!(msg.password), _password: msg.password,
-                        _nextObjId: 1, users: {}
+                        open: true, private: !!(msg.password), _password: msg.password, users: {}
                     }
                     topic.rooms[room.id] = room
                     topic.user_count++
@@ -121,8 +120,7 @@ wss.on('connection', (ws, req) => {
                 break;
 
             case "obj":
-                if (!room) return ws.close(1002, "no room")
-                msg.id = +msg.id || room._nextObjId++
+                msg.id = msg.id || newId()
             case "msg":
                 if (!room) return ws.close(1002, "no room")
 

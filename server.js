@@ -42,7 +42,8 @@ server.on("request", (req, res) => {
         }
         return;
     }
-    res.setHeader("Cache-Control", "max-age=4096")
+    res.setHeader("Cache-Control", "max-age=600")
+    res.setHeader("Access-Control-Allow-Origin", "*")
     let filename = "." + req.url
     for (let char of "?&#;")
         if (filename.includes(char)) filename = filename.slice(0, filename.indexOf(char))

@@ -18,8 +18,8 @@ let secure = ""
 let hostname = "localhost"
 
 wss.on('connection', (ws, req) => {
-    hostname = req?.protocol?.replace("ws", "").replace("http", "") || secure
-    hostname = req?.headers?.host || hostname
+    hostname = (req?.socket?.encrypted ? "s" : "") || secure
+    hostname = (req?.headers?.host) || hostname
 
     let user, topic, room
 

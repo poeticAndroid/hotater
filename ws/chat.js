@@ -14,9 +14,11 @@ const stats = {
     users: { hr: [], min: [], sec: [] },
 }
 
+let secure = ""
 let hostname = "localhost"
 
 wss.on('connection', (ws, req) => {
+    hostname = req?.protocol?.replace("ws", "").replace("http", "") || secure
     hostname = req?.headers?.host || hostname
 
     let user, topic, room
@@ -241,7 +243,7 @@ function dehash(user, hash) {
 
 
 setInterval(async () => {
-    let msg = stringifyJSON({ type: "feedme", url: `http://${hostname}/up.json?now=${Date.now()}` })
+    let msg = stringifyJSON({ type: "feedme", url: `http${secure}://${hostname}/up.json?now=${Date.now()}` })
     for (let ws of wss.clients) {
         if (ws?.readyState === WS.WebSocket.OPEN) {
             stats._out += msg.length
